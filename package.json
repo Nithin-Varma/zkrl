@@ -1,0 +1,18 @@
+{
+  "name": "zkrl",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo with Foundry contracts and Next.js web app",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "pnpm -w --filter web dev",
+    "build": "pnpm -w --filter web build",
+    "start": "pnpm -w --filter web start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  }
+}

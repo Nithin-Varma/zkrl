@@ -1,0 +1,12 @@
+.pnpm-store
+node_modules
+.DS_Store
+**/out
+**/.next
+**/dist
+**/build
+**/cache
+**/.turbo
+**/coverage
+**/.env*
+
