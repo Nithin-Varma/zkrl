@@ -1,6 +1,7 @@
 import { Address } from "viem";
+import identityRegistryOut from "../../../../packages/contracts/out/IdentityRegister.sol/IdentityRegistry.json" assert { type: "json" };
 
-export const identityRegistryAbi = [
+export const identityRegistryAbi = (identityRegistryOut as any).abi ?? [
   {
     type: "function",
     name: "checkVerified",
