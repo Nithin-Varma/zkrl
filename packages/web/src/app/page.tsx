@@ -1,106 +1,103 @@
 "use client";
 import Image from "next/image";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount } from "wagmi";
+import { useCallback, useMemo, useState } from "react";
+import { useReadContract, useWriteContract } from "wagmi";
+import { identityRegistryAbi, getIdentityRegistryAddress } from "@/lib/contracts";
+import type { Address } from "viem";
 
 export default function Home() {
+  const { address, isConnected } = useAccount();
+  const contractAddress = useMemo<Address | undefined>(() => {
+    try {
+      return getIdentityRegistryAddress();
+    } catch {
+      return undefined;
+    }
+  }, []);
+
+  const { data: isVerified, refetch, isFetching } = useReadContract({
+    abi: identityRegistryAbi,
+    address: contractAddress,
+    functionName: "checkVerified",
+    args: address ? [address] : undefined,
+    query: { enabled: isConnected && !!address && !!contractAddress },
+  });
+
+  const { writeContractAsync, isPending } = useWriteContract();
+  const [txError, setTxError] = useState<string | null>(null);
+
+  const handleVerify = useCallback(async () => {
+    if (!address || !contractAddress) return;
+    setTxError(null);
+
+    // TODO: Replace placeholders with proof values returned by Anon Aadhaar widget/SDK
+    const placeholderIdentityHash = "0x" + "00".repeat(32);
+    const placeholderHash = 0n;
+    const placeholderAggregationId = 0n;
+    const placeholderDomainId = 0n;
+    const placeholderMerklePath: `0x${string}`[] = [];
+    const placeholderLeafCount = 0n;
+    const placeholderIndex = 0n;
+
+    try {
+      await writeContractAsync({
+        abi: identityRegistryAbi,
+        address: contractAddress,
+        functionName: "verifyAadhar",
+        args: [
+          address,
+          placeholderIdentityHash as `0x${string}`,
+          placeholderHash,
+          placeholderAggregationId,
+          placeholderDomainId,
+          placeholderMerklePath,
+          placeholderLeafCount,
+          placeholderIndex,
+        ],
+      });
+      await refetch();
+    } catch (err: any) {
+      setTxError(err?.shortMessage || err?.message || "Transaction failed");
+    }
+  }, [address, contractAddress, writeContractAsync, refetch]);
+
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+        
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <ConnectButton />
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          {isConnected && (
+            <div className="flex flex-col gap-2 items-start">
+              {!contractAddress && (
+                <p className="text-red-500 text-sm">Set NEXT_PUBLIC_IDENTITY_REGISTRY_ADDRESS</p>
+              )}
+              {contractAddress && (
+                <>
+                  <p className="text-sm">
+                    Status: {isFetching ? "checking..." : isVerified ? "Verified ✅" : "Not verified"}
+                  </p>
+                  {!isVerified && (
+                    <button
+                      className="rounded-md border border-foreground/20 px-4 py-2 text-sm hover:bg-foreground/10"
+                      onClick={handleVerify}
+                      disabled={isPending}
+                    >
+                      {isPending ? "Verifying..." : "Verify with Anon Aadhaar (placeholder)"}
+                    </button>
+                  )}
+                  {txError && <p className="text-red-500 text-xs">{txError}</p>}
+                </>
+              )}
+            </div>
+          )}
+         
+         
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
