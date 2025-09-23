@@ -17,6 +17,8 @@ contract Bond is IBond, ReentrancyGuard {
 
     mapping(address => address) public userToPartner;
 
+    mapping(address => uint256) public scoreGainedWithThisBond;
+
     uint256 public constant W1 = 30000;
     uint256 public constant W2 = 20000;
     uint256 public constant W3 = 50000;
@@ -111,41 +113,43 @@ contract Bond is IBond, ReentrancyGuard {
     -------------------------------------------------
     */
 
-    function calculateTrustScore(address user) private view returns (uint256) {
-        // IUser.UserDetails memory userDetails = getUserDetails(user);
+    function calculateTrustScore(address user) public returns (uint256) {
+        IUser.UserDetails memory userDetails = getUserDetails(user);
         IUser.UserDetails memory partnerDetails = getUserDetails(userToPartner[user]);
         
         uint256 lnComponent = W1 * _ln(1 + bond.totalBondAmount);
         uint256 sqrtComponent = W2 * _sqrt(block.timestamp - bond.createdAt);
         uint256 partnerComponent = W3 * ((partnerDetails.trustScore / 100) * (individualAmount[userToPartner[user]] / bond.totalBondAmount));
-        
-        return (lnComponent + sqrtComponent + partnerComponent);
-    }
 
-    function ScoreGainedWithThisBond(address user) public view returns (uint256) {
-        return calculateTrustScore(user);
+        uint256 newTrustScore = userDetails.trustScore + lnComponent + sqrtComponent + partnerComponent;
+        IUser userContract = IUser(userFactory.getUserContract(user));
+        userContract.updateTrustScore(newTrustScore);
+        scoreGainedWithThisBond[user] = lnComponent + sqrtComponent + partnerComponent;
+        return newTrustScore;
     }
 
     function _calculateBreakingPenalty(address breaker) private {
+        calculateTrustScore(breaker);
         IUser.UserDetails memory breakerDetails = getUserDetails(breaker);
         uint256 currentTrustScore = breakerDetails.trustScore;
-        uint256 trustScoreGain = calculateTrustScore(breaker);
+        // uint256 trustScoreGain = calculateTrustScore(breaker);
         uint256 penalty = _sqrt(bond.totalBondAmount * breakerDetails.totalBrokenBonds);
-        uint256 newTrustScore = currentTrustScore - trustScoreGain - penalty;
+        uint256 newTrustScore = currentTrustScore - scoreGainedWithThisBond[breaker] - penalty;
         
-        // Actually update the user's trust score
+        // update the user's trust score
         IUser userContract = IUser(userFactory.getUserContract(breaker));
         userContract.updateTrustScore(newTrustScore);
     }
 
     function _calculateWithdrawPenalty(address withdrawer) private {
+        calculateTrustScore(withdrawer);
         IUser.UserDetails memory withdrawerDetails = getUserDetails(withdrawer);
         uint256 currentTrustScore = withdrawerDetails.trustScore;
-        uint256 trustScoreGain = calculateTrustScore(withdrawer);
+        // uint256 trustScoreGain = calculateTrustScore(withdrawer);
         uint256 penalty = _sqrt(bond.totalBondAmount * withdrawerDetails.totalWithdrawnBonds);
-        uint256 newTrustScore = currentTrustScore + trustScoreGain - penalty;
+        uint256 newTrustScore = currentTrustScore - penalty;
         
-        // Actually update the user's trust score
+        // update the user's trust score
         IUser userContract = IUser(userFactory.getUserContract(withdrawer));
         userContract.updateTrustScore(newTrustScore);
     }
