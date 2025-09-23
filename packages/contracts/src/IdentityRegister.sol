@@ -19,6 +19,7 @@ contract IdentityRegistry {
     mapping(bytes32 => address) public identityToAddress;
     mapping(address => bytes32) public addressToIdentity;
     mapping(address => bool) public isVerified;
+    mapping(bytes32 => bool) public usedProofs;
 
     bytes32 public constant PROVING_SYSTEM_ID = keccak256(abi.encodePacked("groth16"));
     bytes32 public constant VERSION_HASH = sha256(abi.encodePacked(""));
@@ -28,6 +29,8 @@ contract IdentityRegistry {
 
     event AadhaarVerified(address indexed wallet, bytes32 identityHash);
     event AadhaarRevoked(address indexed wallet, bytes32 identityHash);
+
+    error ProofAlreadyUsed(address existing);
 
     constructor(address _zkVerify, bytes32 _vkey) {
         zkVerify = _zkVerify;
@@ -46,6 +49,18 @@ contract IdentityRegistry {
         ) public {
             bytes32 leaf = keccak256(abi.encodePacked(PROVING_SYSTEM_ID, vkey, VERSION_HASH, keccak256(abi.encodePacked(_changeEndianess(_hash)))));
 
+            bytes32 proofId = keccak256(abi.encodePacked(leaf, _aggregationId, _domainId));
+            address existing = identityToAddress[identityHash];
+            if(usedProofs[proofId]) {
+                revert ProofAlreadyUsed(existing);
+            }
+
+
+            address existingWallet = identityToAddress[identityHash];
+            require(existingWallet == address(0) || existingWallet == wallet, "Identity already linked");
+            bytes32 existingIdentity = addressToIdentity[wallet];
+            require(existingIdentity == bytes32(0) || existingIdentity == identityHash, "Wallet already linked");
+
             require(IVerifyProofAggregation(zkVerify).verifyProofAggregation(
                 _domainId,
                 _aggregationId,
@@ -54,9 +69,13 @@ contract IdentityRegistry {
                 _leafCount,
                 _index
             ), "Invalid proof");
+
+            usedProofs[proofId] = true;
+
             identityToAddress[identityHash] = wallet;
             addressToIdentity[wallet] = identityHash;
             isVerified[wallet] = true;
+            emit AadhaarVerified(wallet, identityHash);
     }
 
     function revokeAadhar(address wallet, bytes32 identityHash) public {}

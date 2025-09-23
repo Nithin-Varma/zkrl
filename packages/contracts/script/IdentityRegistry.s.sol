@@ -15,6 +15,6 @@ contract IdentityRegistryScript is Script {
         IdentityRegistry identityRegistry = new IdentityRegistry(zkVerify, vkey);
         vm.stopBroadcast();
 
-        console2.log("IdentityRegistry deployed to:", address(identityRegistry));
+        console2.log("IdentityRegistry deployed.... to:", address(identityRegistry));
     }
 }

@@ -1,5 +1,5 @@
 import { useWriteContract } from "wagmi";
-import { bytesToBigInt } from "viem";
+import { keccak256 } from "viem";
 import { useIdentityRegistry } from "./useIdentityRegistry";
 import { submitProofForAggregation, type AggregationResult } from "@/lib/zkverify";
 
@@ -29,6 +29,12 @@ export function useVerifyAadhaar() {
 		aggregation: AggregationResult;
 		domainId: bigint;
 	}): AadhaarProof {
+		if (params.inputsHash === undefined || params.inputsHash === null) {
+			throw new Error("inputsHash is missing");
+		}
+		if (!params.aggregation) {
+			throw new Error("aggregation result is missing");
+		}
 		return {
 			wallet: params.wallet,
 			identityHash: params.identityHash,
@@ -43,6 +49,7 @@ export function useVerifyAadhaar() {
 
 	async function verify(proof: AadhaarProof) {
 		if (!contractAddress) throw new Error("IdentityRegistry address missing");
+		console.log("verifying proof", proof);
 		return write.writeContractAsync({
 			abi,
 			address: contractAddress,
@@ -81,8 +88,8 @@ export function useVerifyAadhaar() {
 			const buf = bigintToUint256BE(joined[i]);
 			enc.set(buf, i * 32);
 		}
-		const hashBytes = keccak256Bytes(enc);
-		return bytesToBigInt(hashBytes);
+    const hashHex = keccak256(enc);
+    return BigInt(hashHex);
 	}
 
 	function bigintToUint256BE(value: bigint): Uint8Array {
@@ -95,11 +102,7 @@ export function useVerifyAadhaar() {
 		return bytes;
 	}
 
-	function keccak256Bytes(data: Uint8Array): Uint8Array {
-		// Use SubtleCrypto is not available; use a tiny keccak implementation via viem utils at callsite would be ideal, but keep local minimalist fallback by importing viem if needed.
-		// We will dynamically import viem's keccak256 and toBytes
-		throw new Error('keccak256Bytes not wired. Use viem keccak256 in page component to compute inputsHash.');
-	}
+  // no-op; keep helper for potential future use
 
 	return { ...write, verify, aggregate, buildContractArgs, computeInputsHash };
 }

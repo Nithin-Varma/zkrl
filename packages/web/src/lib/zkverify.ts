@@ -5,7 +5,7 @@ export type AggregationResult = {
 		numberOfLeaves: number;
 		leafIndex: number;
 	};
-	aggregationId: number;
+	aggregationId: bigint;
 };
 
 const API_URL = 'https://relayer-api.horizenlabs.io/api/v1';
@@ -58,11 +58,17 @@ export async function submitProofForAggregation(latestProof: any, setStatus?: (s
 		setStatus?.(`Job status: ${currentStatus}`);
 		if (currentStatus === 'Aggregated') {
 			const txHash = `https://zkverify-testnet.subscan.io/extrinsic/${statusJson.txHash}`;
+			console.log("Aggregation result: ", {
+				txHash,
+				aggregationDetails: statusJson.aggregationDetails,
+				aggregationId: statusJson.aggregationId,
+			});
 			return {
 				txHash,
 				aggregationDetails: statusJson.aggregationDetails,
 				aggregationId: statusJson.aggregationId,
 			};
+			
 		}
 		await new Promise((r) => setTimeout(r, 5000));
 	}

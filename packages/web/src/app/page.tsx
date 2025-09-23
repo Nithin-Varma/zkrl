@@ -8,6 +8,7 @@ import { useIdentityRegistry } from "@/hooks/useIdentityRegistry";
 import { LogInWithAnonAadhaar, useAnonAadhaar, AnonAadhaarProof, useProver } from "@anon-aadhaar/react";
 import { useEffect } from "react";
 import { keccak256, toBytes, parseAbiItem, encodeFunctionData } from "viem";
+import { type AggregationResult } from "@/lib/zkverify";
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -57,24 +58,39 @@ export default function Home() {
     const result = await aggregate(latestProof, setStatus);
     setAgg(result);
     setTxHash(result.txHash);
+    console.log("Aggregation result: ", result);
     setStatus("Aggregation complete.");
+    return result as AggregationResult;
   }, [aggregate, latestProof]);
 
   const onVerify = useCallback(async () => {
-    if (!address || !latestProof || !agg) return;
+    if (!address || !latestProof) return;
+    
+    // Aggregate first
+    setStatus("Submitting proof to zkVerify relayer...");
+    const result = await aggregate(latestProof, setStatus);
+    setAgg(result);
+    setTxHash(result.txHash);
+    setStatus("Aggregation complete, submitting on-chain...");
+    
+    // Then verify on-chain
     const inputsHash = computeInputsHash();
-    const domainId = 113n;
+    if (inputsHash === undefined || inputsHash === null) return;
     const identityHash = toIdentityHash(address);
     const args = buildContractArgs({
       wallet: address,
       identityHash,
-      inputsHash: inputsHash as unknown as bigint,
-      aggregation: agg,
-      domainId,
+      inputsHash,
+      aggregation: result as AggregationResult,
+      domainId: 113n
     });
+    
     const receipt = await verify(args);
+    console.log("receipt.....", receipt)
+    console.log("verify args: ", args);
     console.log("verify tx: ", receipt);
-  }, [address, latestProof, agg, computeInputsHash, buildContractArgs, verify]);
+    setStatus("Verification complete!");
+  }, [address, latestProof, computeInputsHash, buildContractArgs, verify, aggregate]);
 
   function toIdentityHash(addr: `0x${string}`): `0x${string}` {
     const bytes = toBytes(addr);
@@ -100,8 +116,7 @@ export default function Home() {
                       <AnonAadhaarProof code={JSON.stringify(latestProof, null, 2)} />
                     )}
                     <div className="flex gap-2 mt-2">
-                      <button onClick={onAggregate} className="px-3 py-2 border rounded">Aggregate</button>
-                      <button onClick={onVerify} className="px-3 py-2 border rounded" disabled={!agg}>Verify On-Chain</button>
+                      <button onClick={onVerify} className="px-3 py-2 border rounded">Verify On-Chain</button>
                     </div>
                     {status && <p>{status}</p>}
                     {txHash && (
