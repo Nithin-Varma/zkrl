@@ -12,6 +12,7 @@ interface IUser {
     */
     struct UserDetails {
         address userAddress;
+        uint256 trustScore;
         uint256 totalBonds;
         uint256 totalAmount;
         uint256 totalWithdrawnBonds;
@@ -44,4 +45,9 @@ interface IUser {
     ----------FUNCTIONS----------
     --------------------------
     */
+
+    function getUserDetails() external view returns(UserDetails memory);
+    function createBond(address partner, address userFactory, address bondFactory) external;
+    function getAllBonds() external view returns(address[] memory);
+    function getBondCount() external view returns(uint256);
 }

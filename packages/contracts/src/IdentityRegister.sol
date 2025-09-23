@@ -94,11 +94,6 @@ contract IdentityRegistry {
         return isVerified[wallet];
     }
 
-    // function createUser(address wallet) private {
-    //     // User user = new User();
-    //     // addressToUser[wallet] = address(user);
-    // }
-
     //INTERNAL
     function _changeEndianess(uint256 input) internal pure returns (uint256 v) {
         v = input;

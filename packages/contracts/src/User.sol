@@ -17,6 +17,7 @@ contract User is IUser{
         owner = _user;
         user = UserDetails({
             userAddress: _user,
+            trustScore: 0,
             totalBonds: 0,
             totalAmount: 0,
             totalWithdrawnBonds: 0,
@@ -62,5 +63,9 @@ contract User is IUser{
     
     function getBondCount() external view returns(uint256) {
         return allBonds.length;
+    }
+
+    function getUserDetails() external view returns(IUser.UserDetails memory) {
+        return user;
     }
 }
