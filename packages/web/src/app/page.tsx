@@ -1,134 +1,193 @@
 "use client";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
-import { useCallback, useMemo, useState } from "react";
-import { useCheckVerified } from "@/hooks/useCheckVerified";
-import { useVerifyAadhaar } from "@/hooks/useVerifyAadhaar";
-import { useIdentityRegistry } from "@/hooks/useIdentityRegistry";
-import { LogInWithAnonAadhaar, useAnonAadhaar, AnonAadhaarProof, useProver } from "@anon-aadhaar/react";
 import { useEffect } from "react";
-import { keccak256, toBytes, parseAbiItem, encodeFunctionData } from "viem";
-import { type AggregationResult } from "@/lib/zkverify";
+import { useRouter } from "next/navigation";
+import { useCheckVerified } from "@/hooks/useCheckVerified";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Shield, Zap, Users, TrendingUp, ArrowRight, CheckCircle } from "lucide-react";
 
 export default function Home() {
   const { address, isConnected } = useAccount();
-  const { address: contractAddress } = useIdentityRegistry();
-  const [anonAadhaar] = useAnonAadhaar();
-  const [, latestProof ] = useProver();
-  const { data: isVerified } = useCheckVerified();
-  const { aggregate, buildContractArgs, verify } = useVerifyAadhaar();
-
-  const [status, setStatus] = useState<string>("");
-  const [agg, setAgg] = useState<any>(null);
-  const [txHash, setTxHash] = useState<string>("");
+  const { data: isVerified, isFetching } = useCheckVerified();
+  const router = useRouter();
 
   useEffect(() => {
-    console.log("Anon Aadhaar status: ", anonAadhaar.status);
-    console.log(anonAadhaar);
-  }, [anonAadhaar]);
-
-  const computeInputsHash = useCallback(() => {
-    if (!latestProof?.proof) return undefined as unknown as bigint;
-    const values = [
-      latestProof.proof.pubkeyHash,
-      latestProof.proof.nullifier,
-      latestProof.proof.timestamp,
-      latestProof.proof.ageAbove18,
-      latestProof.proof.gender,
-      latestProof.proof.pincode,
-      latestProof.proof.state,
-      latestProof.proof.nullifierSeed,
-      latestProof.proof.signalHash,
-    ].map((v: any) => BigInt(v));
-    const bytes = new Uint8Array(32 * values.length);
-    for (let i = 0; i < values.length; i++) {
-      let v = values[i];
-      for (let j = 31; j >= 0; j--) {
-        bytes[i * 32 + j] = Number(v & 0xffn);
-        v >>= 8n;
+    if (isConnected && !isFetching) {
+      if (isVerified) {
+        router.push('/dashboard');
+      } else {
+        router.push('/verify');
       }
     }
-    const hash = keccak256(bytes);
-    return BigInt(hash);
-  }, [latestProof]);
-
-  const onAggregate = useCallback(async () => {
-    if (!latestProof) return;
-    setStatus("Submitting proof to zkVerify relayer...");
-    const result = await aggregate(latestProof, setStatus);
-    setAgg(result);
-    setTxHash(result.txHash);
-    console.log("Aggregation result: ", result);
-    setStatus("Aggregation complete.");
-    return result as AggregationResult;
-  }, [aggregate, latestProof]);
-
-  const onVerify = useCallback(async () => {
-    if (!address || !latestProof) return;
-    
-    // Aggregate first
-    setStatus("Submitting proof to zkVerify relayer...");
-    const result = await aggregate(latestProof, setStatus);
-    setAgg(result);
-    setTxHash(result.txHash);
-    setStatus("Aggregation complete, submitting on-chain...");
-    
-    // Then verify on-chain
-    const inputsHash = computeInputsHash();
-    if (inputsHash === undefined || inputsHash === null) return;
-    const identityHash = toIdentityHash(address);
-    const args = buildContractArgs({
-      wallet: address,
-      identityHash,
-      inputsHash,
-      aggregation: result as AggregationResult,
-      domainId: 113n
-    });
-    
-    const receipt = await verify(args);
-    console.log("receipt.....", receipt)
-    console.log("verify args: ", args);
-    console.log("verify tx: ", receipt);
-    setStatus("Verification complete!");
-  }, [address, latestProof, computeInputsHash, buildContractArgs, verify, aggregate]);
-
-  function toIdentityHash(addr: `0x${string}`): `0x${string}` {
-    const bytes = toBytes(addr);
-    return keccak256(bytes) as `0x${string}`;
-  }
+  }, [isConnected, isVerified, isFetching, router]);
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Header */}
+      <header className="border-b bg-white/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Shield className="h-8 w-8 text-blue-600" />
+            <span className="text-2xl font-bold text-slate-900">zkRL</span>
+          </div>
           <ConnectButton />
-          {isConnected && (
-            <>
-            <div>
-              <LogInWithAnonAadhaar nullifierSeed={1234} />
-              <p>{anonAadhaar?.status}</p>
-            </div>
-            <div>
-                {anonAadhaar?.status === "logged-in" && (
-                  <>
-                    <p>✅ Proof is valid</p>
-                    {latestProof && (
-                      <AnonAadhaarProof code={JSON.stringify(latestProof, null, 2)} />
-                    )}
-                    <div className="flex gap-2 mt-2">
-                      <button onClick={onVerify} className="px-3 py-2 border rounded">Verify On-Chain</button>
-                    </div>
-                    {status && <p>{status}</p>}
-                    {txHash && (
-                      <a href={txHash} target="_blank" rel="noreferrer" className="underline">View zkVerify extrinsic</a>
-                    )}
-                  </>
-                )}
-              </div>
-              </>
-          )}
         </div>
-      </main>
+      </header>
+
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 py-16">
+        <div className="text-center max-w-4xl mx-auto">
+          <Badge variant="outline" className="mb-6">
+            <Zap className="w-4 h-4 mr-2" />
+            Zero-Knowledge Reputation Lending
+          </Badge>
+          
+          <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6">
+            Lend with <span className="text-blue-600">Trust</span>,<br />
+            Not Collateral
+          </h1>
+          
+          <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
+            Break free from over-collateralized lending. Use your verified identity and reputation 
+            as collateral to access fair, trust-based loans on the blockchain.
+          </p>
+
+          {/* <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+            <Button size="lg" className="text-lg px-8 py-6">
+              Get Started
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Button variant="outline" size="lg" className="text-lg px-8 py-6">
+              Learn More
+            </Button>
+          </div> */}
+        </div>
+
+        {/* Problem & Solution Cards */}
+        <div className="grid md:grid-cols-2 gap-8 mb-16">
+          <Card className="border-red-200 bg-red-50/50">
+            <CardHeader>
+              <CardTitle className="text-red-800 flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2" />
+                The Problem
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-red-700">
+                Traditional DeFi lending requires 150-300% collateralization, locking up massive amounts 
+                of capital and limiting access to credit for those who need it most.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-green-200 bg-green-50/50">
+            <CardHeader>
+              <CardTitle className="text-green-800 flex items-center">
+                <CheckCircle className="w-5 h-5 mr-2" />
+                Our Solution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-green-700">
+                zkRL uses zero-knowledge proofs to verify your identity and reputation on-chain, 
+                creating "trust bonds" that serve as collateral for fair, accessible loans.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* How It Works */}
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-bold text-slate-900 mb-8">How zkRL Works</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card>
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-6 h-6 text-blue-600" />
+                </div>
+                <CardTitle>1. Verify Identity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-600">
+                  Use Anon Aadhaar to prove your identity without revealing personal data. 
+                  Your verification is stored as a zero-knowledge proof.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-6 h-6 text-green-600" />
+                </div>
+                <CardTitle>2. Build Reputation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-600">
+                  Create trust bonds with other verified users. Your reputation score grows 
+                  through successful transactions and community interactions.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-6 h-6 text-purple-600" />
+                </div>
+                <CardTitle>3. Access Credit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-600">
+                  Use your reputation as collateral to access loans at fair rates. 
+                  No over-collateralization required.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div className="bg-white rounded-2xl p-8 shadow-lg">
+          <h2 className="text-3xl font-bold text-center text-slate-900 mb-8">Why Choose zkRL?</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">Privacy First</h3>
+              <p className="text-sm text-slate-600">Your identity data never leaves your device</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">Fair Rates</h3>
+              <p className="text-sm text-slate-600">No over-collateralization required</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">Community Driven</h3>
+              <p className="text-sm text-slate-600">Build trust through community interactions</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-8 h-8 text-orange-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">Instant Access</h3>
+              <p className="text-sm text-slate-600">Get verified and start lending immediately</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
