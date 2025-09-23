@@ -12,7 +12,7 @@ contract Bond is IBond, ReentrancyGuard {
 
 
     mapping(address => uint256) public individualAmount;
-    // mapping(address => uint256) public claimableYield;
+
     mapping(address => uint256) public individualPercentage;
 
     mapping(address => address) public userToPartner;
@@ -55,10 +55,11 @@ contract Bond is IBond, ReentrancyGuard {
         return bond;
     }
 
-    function withdraw(address to) external override nonReentrant returns (BondDetails memory) {
+    function withdraw() external nonReentrant returns (BondDetails memory) {
         _onlyActive();
         _onlyUser();
         _freezed();
+        _calculateWithdrawPenalty(msg.sender);
         uint256 withdrawable = individualAmount[msg.sender];
         individualAmount[msg.sender] = 0;
         bond.isWithdrawn = true;
@@ -66,10 +67,11 @@ contract Bond is IBond, ReentrancyGuard {
         return bond;
     }
 
-    function breakBond(address _to) external override nonReentrant returns (BondDetails memory) {
+    function breakBond() external nonReentrant returns (BondDetails memory) {
         _onlyActive();
         _onlyUser();
         _freezed();
+        _calculateBreakingPenalty(msg.sender);
         bond.isBroken = true;
         bond.isActive = false;
         individualAmount[bond.user1] = 0;
@@ -110,7 +112,7 @@ contract Bond is IBond, ReentrancyGuard {
     */
 
     function calculateTrustScore(address user) private view returns (uint256) {
-        IUser.UserDetails memory userDetails = getUserDetails(user);
+        // IUser.UserDetails memory userDetails = getUserDetails(user);
         IUser.UserDetails memory partnerDetails = getUserDetails(userToPartner[user]);
         
         uint256 lnComponent = W1 * _ln(1 + bond.totalBondAmount);
@@ -120,16 +122,32 @@ contract Bond is IBond, ReentrancyGuard {
         return (lnComponent + sqrtComponent + partnerComponent);
     }
 
-    function calculateBreakingPenalty(address breaker) private view{
-        IUser.UserDetails memory breakerDetails = getUserDetails(breaker);
-        uint256 breakerTrustScore = breakerDetails.trustScore;
-        breakerDetails.trustScore = breakerTrustScore - (calculateTrustScore(breaker) + _sqrt(bond.totalBondAmount * breakerDetails.totalBrokenBonds));
+    function ScoreGainedWithThisBond(address user) public view returns (uint256) {
+        return calculateTrustScore(user);
     }
 
-    function calculateWithdrawPenalty(address withdrawer) private view {
+    function _calculateBreakingPenalty(address breaker) private {
+        IUser.UserDetails memory breakerDetails = getUserDetails(breaker);
+        uint256 currentTrustScore = breakerDetails.trustScore;
+        uint256 trustScoreGain = calculateTrustScore(breaker);
+        uint256 penalty = _sqrt(bond.totalBondAmount * breakerDetails.totalBrokenBonds);
+        uint256 newTrustScore = currentTrustScore - trustScoreGain - penalty;
+        
+        // Actually update the user's trust score
+        IUser userContract = IUser(userFactory.getUserContract(breaker));
+        userContract.updateTrustScore(newTrustScore);
+    }
+
+    function _calculateWithdrawPenalty(address withdrawer) private {
         IUser.UserDetails memory withdrawerDetails = getUserDetails(withdrawer);
-        uint256 withdrawerTrustScore = withdrawerDetails.trustScore;
-        withdrawerDetails.trustScore = withdrawerTrustScore + calculateTrustScore(withdrawer) - ( _sqrt(bond.totalBondAmount * withdrawerDetails.totalWithdrawnBonds));
+        uint256 currentTrustScore = withdrawerDetails.trustScore;
+        uint256 trustScoreGain = calculateTrustScore(withdrawer);
+        uint256 penalty = _sqrt(bond.totalBondAmount * withdrawerDetails.totalWithdrawnBonds);
+        uint256 newTrustScore = currentTrustScore + trustScoreGain - penalty;
+        
+        // Actually update the user's trust score
+        IUser userContract = IUser(userFactory.getUserContract(withdrawer));
+        userContract.updateTrustScore(newTrustScore);
     }
 
 

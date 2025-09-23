@@ -68,4 +68,10 @@ contract User is IUser{
     function getUserDetails() external view returns(IUser.UserDetails memory) {
         return user;
     }
+
+    function updateTrustScore(uint256 newTrustScore) external {
+        // Only allow the user themselves or authorized contracts to update trust score
+        // require(msg.sender == owner, "Only owner can update trust score");
+        user.trustScore = newTrustScore;
+    }
 }
