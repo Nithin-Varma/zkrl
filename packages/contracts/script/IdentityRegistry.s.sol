@@ -12,7 +12,8 @@ contract IdentityRegistryScript is Script {
 
         address zkVerify = 0x201B6ba8EA862d83AAA03CFbaC962890c7a4d195;
         bytes32 vkey = 0x0b692be7b498a34664f07464866c2948b3ba925657185e5f2323be452bfd6722;
-        IdentityRegistry identityRegistry = new IdentityRegistry(zkVerify, vkey);
+        address userFactory = address(0); // TODO: Deploy UserFactory first
+        IdentityRegistry identityRegistry = new IdentityRegistry(zkVerify, vkey, userFactory);
         vm.stopBroadcast();
 
         console2.log("IdentityRegistry deployed.... to:", address(identityRegistry));

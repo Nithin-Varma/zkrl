@@ -2,6 +2,9 @@
 
 pragma solidity 0.8.30;
 
+import {User} from "./User.sol";
+import {IUser} from "./interfaces/IUser.sol";
+import {IUserFactory} from "./interfaces/IUserFactory.sol";
 
 interface IVerifyProofAggregation {
     function verifyProofAggregation(
@@ -20,21 +23,24 @@ contract IdentityRegistry {
     mapping(address => bytes32) public addressToIdentity;
     mapping(address => bool) public isVerified;
     mapping(bytes32 => bool) public usedProofs;
+    mapping(address => address) public addressToUser;
 
     bytes32 public constant PROVING_SYSTEM_ID = keccak256(abi.encodePacked("groth16"));
     bytes32 public constant VERSION_HASH = sha256(abi.encodePacked(""));
     bytes32 public vkey;
 
     address public zkVerify;
+    IUserFactory public userFactory;
 
     event AadhaarVerified(address indexed wallet, bytes32 identityHash);
     event AadhaarRevoked(address indexed wallet, bytes32 identityHash);
 
     error ProofAlreadyUsed(address existing);
 
-    constructor(address _zkVerify, bytes32 _vkey) {
+    constructor(address _zkVerify, bytes32 _vkey, address _userFactory) {
         zkVerify = _zkVerify;
         vkey = _vkey;
+        userFactory = IUserFactory(_userFactory);
     }
 
     function verifyAadhar(
@@ -75,6 +81,10 @@ contract IdentityRegistry {
             identityToAddress[identityHash] = wallet;
             addressToIdentity[wallet] = identityHash;
             isVerified[wallet] = true;
+            // createUser(wallet);
+            IUser user = IUser(userFactory.createUser(wallet));
+            addressToUser[wallet] = address(user);
+
             emit AadhaarVerified(wallet, identityHash);
     }
 
@@ -83,6 +93,11 @@ contract IdentityRegistry {
     function checkVerified(address wallet) external view returns (bool) {
         return isVerified[wallet];
     }
+
+    // function createUser(address wallet) private {
+    //     // User user = new User();
+    //     // addressToUser[wallet] = address(user);
+    // }
 
     //INTERNAL
     function _changeEndianess(uint256 input) internal pure returns (uint256 v) {
