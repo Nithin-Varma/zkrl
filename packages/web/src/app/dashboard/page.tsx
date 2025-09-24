@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useCheckVerified } from "@/hooks/useCheckVerified";
 import { useUserInitialization } from "@/hooks/useUserInitialization";
 import { useUserBondsInfo } from "@/hooks/useBonds";
-import { useCreateBond } from "@/hooks/useBondFactory";
+import { useCreateUserBond } from "@/hooks/useUserBond";
 import { BondCard } from "@/components/BondCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,12 +27,18 @@ export default function DashboardPage() {
     initializeUser,
     isLoading: userLoading 
   } = useUserInitialization();
+
+  console.log("user contract address", userContractAddress);
+  console.log("user details....", userDetails);
   
   // Bonds data
   const { bondsInfo, isLoading: bondsLoading } = useUserBondsInfo(userContractAddress || undefined);
+  console.log("bonds info....", bondsInfo);
+
+  console.log("bonds info", bondsInfo);
   
   // Bond creation
-  const { createBond, isPending: isCreatingBond } = useCreateBond();
+  const { createBond, isPending: isCreatingBond } = useCreateUserBond(userContractAddress || undefined);
   
   // State for creating new bond
   const [showCreateBond, setShowCreateBond] = useState(false);
@@ -52,7 +58,7 @@ export default function DashboardPage() {
     if (!partnerAddress || !userContractAddress) return;
     
     try {
-      await createBond("0x0000000000000000000000000000000000000000", userContractAddress, partnerAddress);
+      await createBond(partnerAddress);
       setShowCreateBond(false);
       setPartnerAddress("");
     } catch (error) {
@@ -168,12 +174,12 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {userDetails ? Number(userDetails.trustScore) : 0}
+                {userDetails ? Number((userDetails as any).trustScore) : 0}
               </div>
               <div className="flex items-center mt-2">
-                <Progress value={userDetails ? Math.min(Number(userDetails.trustScore) / 10, 100) : 0} className="flex-1 mr-2" />
+                <Progress value={userDetails ? Math.min(Number((userDetails as any).trustScore) / 10, 100) : 0} className="flex-1 mr-2" />
                 <span className="text-sm text-slate-500">
-                  {userDetails ? Math.min(Number(userDetails.trustScore) / 10, 100).toFixed(0) : 0}%
+                  {userDetails ? Math.min(Number((userDetails as any).trustScore) / 10, 100).toFixed(0) : 0}%
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -189,10 +195,10 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {userDetails ? Number(userDetails.totalBonds) : 0}
+                {userDetails ? Number((userDetails as any).totalBonds) : 0}
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Active: {userDetails ? Number(userDetails.totalActiveBonds) : 0}
+                Active: {userDetails ? Number((userDetails as any).totalActiveBonds) : 0}
               </p>
             </CardContent>
           </Card>
@@ -204,7 +210,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {userDetails ? (Number(userDetails.totalAmount) / 1e18).toFixed(2) : "0.00"} ETH
+                {userDetails ? (Number((userDetails as any).totalAmount) / 1e18).toFixed(2) : "0.00"} ETH
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 Across all your bonds
@@ -288,8 +294,12 @@ export default function DashboardPage() {
                   </CardContent>
                 </Card>
               ) : (
-                bondsInfo.map((bond) => (
-                  <BondCard key={bond.address} bondAddress={bond.address} />
+                bondsInfo.map((bond: any) => (
+                  <BondCard 
+                    key={bond.address} 
+                    bondAddress={bond.address} 
+                    userContractAddress={userContractAddress || undefined}
+                  />
                 ))
               )}
             </div>
@@ -319,15 +329,15 @@ export default function DashboardPage() {
                     {address}
                   </div>
                 </div>
-                {userDetails && (
+                {userDetails && (userDetails as any) && (
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                     <div>
                       <div className="text-sm text-slate-500">Withdrawn Bonds</div>
-                      <div className="font-semibold">{Number(userDetails.totalWithdrawnBonds)}</div>
+                      <div className="font-semibold">{Number((userDetails as any).totalWithdrawnBonds)}</div>
                     </div>
                     <div>
                       <div className="text-sm text-slate-500">Broken Bonds</div>
-                      <div className="font-semibold">{Number(userDetails.totalBrokenBonds)}</div>
+                      <div className="font-semibold">{Number((userDetails as any).totalBrokenBonds)}</div>
                     </div>
                   </div>
                 )}

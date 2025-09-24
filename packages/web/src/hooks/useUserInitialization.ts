@@ -23,7 +23,7 @@ export function useUserInitialization() {
 
   useEffect(() => {
     if (contractAddress && contractAddress !== "0x0000000000000000000000000000000000000000") {
-      setUserContractAddress(contractAddress);
+      setUserContractAddress(contractAddress as `0x${string}`);
       setIsInitialized(true);
     }
   }, [contractAddress]);

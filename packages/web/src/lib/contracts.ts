@@ -20,7 +20,7 @@ export const identityRegistryAbi = (identityRegistryOut as any).abi ?? [
     inputs: [
       { name: "wallet", type: "address" },
       { name: "identityHash", type: "bytes32" },
-      { name: "_hash", type: "uint256" },
+      { name: "_leaf", type: "bytes32" },
       { name: "_aggregationId", type: "uint256" },
       { name: "_domainId", type: "uint256" },
       { name: "_merklePath", type: "bytes32[]" },
@@ -122,9 +122,52 @@ export const userAbi = (userOut as any).abi ?? [
     inputs: [],
     outputs: [{ name: "", type: "uint256" }],
   },
+  {
+    type: "function",
+    name: "createBond",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "partner", type: "address" },
+      { name: "userFactory", type: "address" },
+      { name: "bondFactory", type: "address" }
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "addBond",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "bondAddress", type: "address" }
+    ],
+    outputs: [],
+  },
 ] as const;
 
 export const bondAbi = (bondOut as any).abi ?? [
+  {
+    type: "function",
+    name: "bond",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "asset", type: "address" },
+          { name: "user1", type: "address" },
+          { name: "user2", type: "address" },
+          { name: "totalBondAmount", type: "uint256" },
+          { name: "createdAt", type: "uint256" },
+          { name: "isBroken", type: "bool" },
+          { name: "isWithdrawn", type: "bool" },
+          { name: "isActive", type: "bool" },
+          { name: "isFreezed", type: "bool" }
+        ]
+      }
+    ],
+  },
   {
     type: "function",
     name: "stake",

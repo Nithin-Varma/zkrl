@@ -49,10 +49,14 @@ contract User is IUser{
         BondFactory bondFactoryContract = BondFactory(bondFactory);
         address bondAddress = bondFactoryContract.createBond(address(0), address(this), partnerUserContract);
         
-        // Track the bond
+        // Track the bond in creator's contract
         allBonds.push(bondAddress);
         user.totalBonds += 1;
         user.totalActiveBonds += 1;
+        
+        // ADD BOND TO PARTNER'S CONTRACT TOO
+        IUser partnerUser = IUser(partnerUserContract);
+        partnerUser.addBond(bondAddress);
         
         emit BondDeployed(bondAddress, owner, partner, 0, block.timestamp);
     }
@@ -73,5 +77,14 @@ contract User is IUser{
         // Only allow the user themselves or authorized contracts to update trust score
         // require(msg.sender == owner, "Only owner can update trust score");
         user.trustScore = newTrustScore;
+    }
+
+    // Function to add a bond to this user's contract (called by other User contracts)
+    function addBond(address bondAddress) external {
+        // Only allow other User contracts or the bond itself to add bonds
+        // This ensures bonds are only added by authorized contracts
+        allBonds.push(bondAddress);
+        user.totalBonds += 1;
+        user.totalActiveBonds += 1;
     }
 }

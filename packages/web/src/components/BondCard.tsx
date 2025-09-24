@@ -10,9 +10,10 @@ import { Loader2, Coins, ArrowDownLeft, X } from "lucide-react";
 
 interface BondCardProps {
   bondAddress: string;
+  userContractAddress?: string;
 }
 
-export function BondCard({ bondAddress }: BondCardProps) {
+export function BondCard({ bondAddress, userContractAddress }: BondCardProps) {
   const { address } = useAccount();
   const { bondDetails, userAmount, isLoading } = useBondInfo(bondAddress);
   const { stake, isPending: isStaking } = useStake();
@@ -47,10 +48,37 @@ export function BondCard({ bondAddress }: BondCardProps) {
     );
   }
 
-  const isActive = bondDetails.isActive && !bondDetails.isBroken && !bondDetails.isWithdrawn;
-  const isPartner = bondDetails.user1 === address || bondDetails.user2 === address;
+  console.log("bond details....", bondDetails);
+  console.log("user amount....", userAmount);
+  console.log("address....", address);
+
+  // Handle array structure from smart contract
+  const bondData = Array.isArray(bondDetails) ? {
+    asset: bondDetails[0],
+    user1: bondDetails[1],
+    user2: bondDetails[2],
+    totalBondAmount: bondDetails[3],
+    createdAt: bondDetails[4],
+    isBroken: bondDetails[5],
+    isWithdrawn: bondDetails[6],
+    isActive: bondDetails[7],
+    isFreezed: bondDetails[8]
+  } : (bondDetails as any);
+
+  console.log("is broken....", bondData.isBroken);
+
+  const isActive = bondData.isActive && !bondData.isBroken && !bondData.isWithdrawn;
+  const isPartner = bondData.user1 === userContractAddress || bondData.user2 === userContractAddress;
+  console.log("Bond participants:", bondData.user1, bondData.user2);
+  console.log("User contract address:", userContractAddress);
+  console.log("Is partner:", isPartner);
   const userAmountEth = Number(userAmount) / 1e18;
-  const totalAmountEth = Number(bondDetails.totalBondAmount) / 1e18;
+  const totalAmountEth = Number(bondData.totalBondAmount) / 1e18;
+
+  // Don't render the bond card if user is not a participant
+  if (!isPartner) {
+    return null;
+  }
 
   const handleStake = async () => {
     if (!stakeAmount || !address) return;
@@ -93,7 +121,7 @@ export function BondCard({ bondAddress }: BondCardProps) {
           </Badge>
         </div>
         <CardDescription>
-          Partner: {bondDetails.user1 === address ? bondDetails.user2 : bondDetails.user1}
+          Partner: {bondData.user1 === userContractAddress ? bondData.user2 : bondData.user1}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
