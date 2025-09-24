@@ -46,16 +46,17 @@ contract IdentityRegistry {
     function verifyAadhar(
         address wallet, 
         bytes32 identityHash, 
-        uint256 _hash,
+        // uint256 _hash,
+        bytes32 _leaf,
         uint256 _aggregationId,
         uint256 _domainId,
         bytes32[] calldata _merklePath,
         uint256 _leafCount,
         uint256 _index
         ) public {
-            bytes32 leaf = keccak256(abi.encodePacked(PROVING_SYSTEM_ID, vkey, VERSION_HASH, keccak256(abi.encodePacked(_changeEndianess(_hash)))));
+            // bytes32 leaf = keccak256(abi.encodePacked(PROVING_SYSTEM_ID, vkey, VERSION_HASH, keccak256(abi.encodePacked(_changeEndianess(_hash)))));
 
-            bytes32 proofId = keccak256(abi.encodePacked(leaf, _aggregationId, _domainId));
+            bytes32 proofId = keccak256(abi.encodePacked(_leaf, _aggregationId, _domainId));
             address existing = identityToAddress[identityHash];
             if(usedProofs[proofId]) {
                 revert ProofAlreadyUsed(existing);
@@ -70,7 +71,7 @@ contract IdentityRegistry {
             require(IVerifyProofAggregation(zkVerify).verifyProofAggregation(
                 _domainId,
                 _aggregationId,
-                leaf,
+                _leaf,
                 _merklePath,
                 _leafCount,
                 _index

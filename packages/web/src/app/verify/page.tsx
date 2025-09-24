@@ -52,30 +52,6 @@ export default function VerifyPage() {
     startReq({ type: 'logout' });
   };
 
-  const computeInputsHash = useCallback(() => {
-    if (!latestProof?.proof) return undefined as unknown as bigint;
-    const values = [
-      latestProof.proof.pubkeyHash,
-      latestProof.proof.nullifier,
-      latestProof.proof.timestamp,
-      latestProof.proof.ageAbove18,
-      latestProof.proof.gender,
-      latestProof.proof.pincode,
-      latestProof.proof.state,
-      latestProof.proof.nullifierSeed,
-      latestProof.proof.signalHash,
-    ].map((v: any) => BigInt(v));
-    const bytes = new Uint8Array(32 * values.length);
-    for (let i = 0; i < values.length; i++) {
-      let v = values[i];
-      for (let j = 31; j >= 0; j--) {
-        bytes[i * 32 + j] = Number(v & 0xffn);
-        v >>= 8n;
-      }
-    }
-    const hash = keccak256(bytes);
-    return BigInt(hash);
-  }, [latestProof]);
 
   function toIdentityHash(addr: `0x${string}`): `0x${string}` {
     const bytes = toBytes(addr);
@@ -103,16 +79,12 @@ export default function VerifyPage() {
       setStatus("Aggregation complete, submitting on-chain...");
       setProgress(80);
       
-      const inputsHash = computeInputsHash();
-      if (inputsHash === undefined || inputsHash === null) return;
-      
       const identityHash = toIdentityHash(address);
       const args = buildContractArgs({
         wallet: address,
         identityHash,
-        inputsHash,
         aggregation: result as AggregationResult,
-        domainId: 113n
+        domainId: 113
       });
       
       const receipt = await verify(args);
@@ -150,7 +122,7 @@ export default function VerifyPage() {
       setShowOnChainError(true);
       setOnChainError(`Transaction failed: ${error.message}`);
     }
-  }, [address, latestProof, computeInputsHash, buildContractArgs, verify, aggregate, refetch, router]);
+  }, [address, latestProof, buildContractArgs, verify, aggregate, refetch, router]);
 
   if (!isConnected) {
     return (

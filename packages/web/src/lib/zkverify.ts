@@ -4,6 +4,7 @@ export type AggregationResult = {
 		merkleProof: `0x${string}`[];
 		numberOfLeaves: number;
 		leafIndex: number;
+		leaf: `0x${string}`;
 	};
 	aggregationId: bigint;
 };
@@ -55,8 +56,11 @@ export async function submitProofForAggregation(latestProof: any, setStatus?: (s
 		if (!statusResp.ok) throw new Error(`Status failed: ${statusResp.status}`);
 		const statusJson = await statusResp.json();
 		const currentStatus = statusJson.status as string;
+		console.log("Current status: ", currentStatus);
+		console.log("Status JSON: ", statusJson);
 		setStatus?.(`Job status: ${currentStatus}`);
 		if (currentStatus === 'Aggregated') {
+			console.log("Aggregation result: ", statusJson);
 			const txHash = `https://zkverify-testnet.subscan.io/extrinsic/${statusJson.txHash}`;
 			console.log("Aggregation result: ", {
 				txHash,
@@ -65,7 +69,10 @@ export async function submitProofForAggregation(latestProof: any, setStatus?: (s
 			});
 			return {
 				txHash,
-				aggregationDetails: statusJson.aggregationDetails,
+				aggregationDetails: {
+					...statusJson.aggregationDetails,
+					leaf: statusJson.leaf || statusJson.aggregationDetails.leaf,
+				},
 				aggregationId: statusJson.aggregationId,
 			};
 			

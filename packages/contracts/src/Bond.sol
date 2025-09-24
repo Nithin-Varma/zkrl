@@ -48,13 +48,18 @@ contract Bond is IBond, ReentrancyGuard {
         emit BondCreated(address(this), _user1, _user2, 0, block.timestamp);
     }
 
-    function stake(address user, uint256 _amount) external override nonReentrant returns (BondDetails memory) {
+    function stake(address user, uint256 _amount) public override nonReentrant payable returns (BondDetails memory) {
         _onlyActive();
+        require(msg.value == _amount, "ETH amount must match stake amount");
         individualAmount[user] += _amount;
         bond.totalBondAmount += _amount;
         individualPercentage[bond.user1] = (individualAmount[bond.user1] * MAX_BPS) / bond.totalBondAmount;
         individualPercentage[bond.user2] = (individualAmount[bond.user2] * MAX_BPS) / bond.totalBondAmount;
         return bond;
+    }
+
+    receive() external payable {
+        stake(msg.sender, msg.value);
     }
 
     function withdraw() external nonReentrant returns (BondDetails memory) {
@@ -65,6 +70,11 @@ contract Bond is IBond, ReentrancyGuard {
         uint256 withdrawable = individualAmount[msg.sender];
         individualAmount[msg.sender] = 0;
         bond.isWithdrawn = true;
+        
+        // Send ETH to msg.sender
+        (bool success, ) = payable(msg.sender).call{value: withdrawable}("");
+        require(success, "ETH transfer failed");
+        
         emit BondWithdrawn(address(this), bond.user1, bond.user2, msg.sender, withdrawable, block.timestamp);
         return bond;
     }
@@ -76,8 +86,17 @@ contract Bond is IBond, ReentrancyGuard {
         _calculateBreakingPenalty(msg.sender);
         bond.isBroken = true;
         bond.isActive = false;
+        
+        // Send ETH to msg.sender (the breaker)
+        uint256 breakerAmount = individualAmount[msg.sender];
         individualAmount[bond.user1] = 0;
         individualAmount[bond.user2] = 0;
+        
+        if (breakerAmount > 0) {
+            (bool success, ) = payable(msg.sender).call{value: breakerAmount}("");
+            require(success, "ETH transfer failed");
+        }
+        
         emit BondBroken(address(this), bond.user1, bond.user2, msg.sender, bond.totalBondAmount, block.timestamp);
         return bond;
     }
