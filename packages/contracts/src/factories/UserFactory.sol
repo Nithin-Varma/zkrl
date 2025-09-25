@@ -7,6 +7,7 @@ import {IUser} from "../interfaces/IUser.sol";
 contract UserFactory {
 
     mapping(address => bool) public isUser;
+    mapping(address => bool) public isUserContract;
     mapping(address => address) public walletToUserContract;
 
     function createUser(address wallet) external returns(address) {
@@ -15,7 +16,8 @@ contract UserFactory {
         User user = new User(wallet);
         address userContract = address(user);
         
-        isUser[userContract] = true;
+        isUser[wallet] = true;
+        isUserContract[userContract] = true;
         walletToUserContract[wallet] = userContract;
         
         return userContract;

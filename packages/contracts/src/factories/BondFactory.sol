@@ -33,6 +33,3 @@ contract BondFactory {
         return allBonds.length;
     }
 }
-
-
-

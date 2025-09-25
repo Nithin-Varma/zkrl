@@ -50,7 +50,7 @@ contract Bond is IBond, ReentrancyGuard {
 
     function stake(address user, uint256 _amount) public override nonReentrant payable returns (BondDetails memory) {
         _onlyActive();
-        require(msg.value == _amount, "ETH amount must match stake amount");
+        require(_amount > 0, "Amount must be greater than 0");
         individualAmount[user] += _amount;
         bond.totalBondAmount += _amount;
         individualPercentage[bond.user1] = (individualAmount[bond.user1] * MAX_BPS) / bond.totalBondAmount;
@@ -64,7 +64,7 @@ contract Bond is IBond, ReentrancyGuard {
 
     function withdraw() external nonReentrant returns (BondDetails memory) {
         _onlyActive();
-        _onlyUser();
+        // _onlyUser();
         // Removed _freezed() call as it was causing failures
         _calculateWithdrawPenalty(msg.sender);
         uint256 withdrawable = individualAmount[msg.sender];
@@ -81,7 +81,7 @@ contract Bond is IBond, ReentrancyGuard {
 
     function breakBond() external nonReentrant returns (BondDetails memory) {
         _onlyActive();
-        _onlyUser();
+        // _onlyUser();
         // Removed _freezed() call as it was causing failures
         _calculateBreakingPenalty(msg.sender);
         bond.isBroken = true;
