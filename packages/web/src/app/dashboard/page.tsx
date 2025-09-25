@@ -210,7 +210,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {userDetails ? (Number((userDetails as any).totalAmount) / 1e18).toFixed(2) : "0.00"} ETH
+                {userDetails ? (Number((userDetails as any).totalAmount) / 1e18).toFixed(4) : "0.00"} ETH
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 Across all your bonds
