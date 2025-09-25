@@ -2,11 +2,10 @@
 pragma solidity 0.8.30;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IBond.sol";
 import "./interfaces/IUser.sol";
 
-contract Lender is ReentrancyGuard, Ownable {
+contract Lender is ReentrancyGuard {
     
     
     uint256 public interestRate;
@@ -45,29 +44,29 @@ contract Lender is ReentrancyGuard, Ownable {
     error LoanAlreadyRepaid();
     error InvalidProof();
     
-    constructor(uint256 _interestRate) Ownable(msg.sender) {
+    constructor(uint256 _interestRate) {
         interestRate = _interestRate;
     }
     
-    function addFunds() external payable onlyOwner {
+    function addFunds() external payable {
         require(msg.value > 0, "Must send ETH");
         totalFunds += msg.value;
         availableFunds += msg.value;
         emit FundsAdded(msg.value, totalFunds);
     }
     
-    function setInterestRate(uint256 _rate) external onlyOwner {
+    function setInterestRate(uint256 _rate) external {
         require(_rate > 0 && _rate <= 10000, "Invalid interest rate"); // Max 100%
         interestRate = _rate;
         emit InterestRateUpdated(_rate);
     }
     
-    function withdrawFunds(uint256 _amount) external onlyOwner nonReentrant {
+    function withdrawFunds(uint256 _amount) external nonReentrant {
         require(_amount <= availableFunds, "Insufficient available funds");
         availableFunds -= _amount;
         totalFunds -= _amount;
         
-        (bool success, ) = payable(owner()).call{value: _amount}("");
+        (bool success, ) = payable(msg.sender).call{value: _amount}("");
         require(success, "ETH transfer failed");
     }
     
@@ -77,7 +76,7 @@ contract Lender is ReentrancyGuard, Ownable {
         uint256 _duration,
         address[] calldata _collateralBonds,
         bytes calldata _proof
-    ) external onlyOwner nonReentrant {
+    ) external nonReentrant {
         require(_amount <= availableFunds, "Insufficient funds");
         require(_amount > 0, "Invalid amount");
         require(_collateralBonds.length > 0, "No collateral bonds");
