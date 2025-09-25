@@ -85,6 +85,7 @@ export function useWithdraw() {
       abi: bondAbi,
       address: bondAddress as `0x${string}`,
       functionName: "withdraw",
+      args: [],
     });
   };
 
@@ -110,6 +111,7 @@ export function useBreakBond() {
       abi: bondAbi,
       address: bondAddress as `0x${string}`,
       functionName: "breakBond",
+      args: [],
     });
   };
 

@@ -144,6 +144,145 @@ export const userAbi = (userOut as any).abi ?? [
   },
 ] as const;
 
+export const lenderFactoryAbi = [
+  {
+    type: "function",
+    name: "createLenderContract",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_interestRate", type: "uint256" }],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "getLenderContract",
+    stateMutability: "view",
+    inputs: [{ name: "_lender", type: "address" }],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "hasLenderContract",
+    stateMutability: "view",
+    inputs: [{ name: "_lender", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "getAllLenders",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address[]" }],
+  },
+  {
+    type: "function",
+    name: "getLenderCount",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
+export const lenderAbi = [
+  {
+    type: "function",
+    name: "addFunds",
+    stateMutability: "payable",
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "setInterestRate",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_rate", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "withdrawFunds",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_amount", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "verifyAndLend",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_borrower", type: "address" },
+      { name: "_amount", type: "uint256" },
+      { name: "_duration", type: "uint256" },
+      { name: "_collateralBonds", type: "address[]" },
+      { name: "_proof", type: "bytes" }
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "repayLoan",
+    stateMutability: "payable",
+    inputs: [{ name: "_loanId", type: "bytes32" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "getOwnedBonds",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address[]" }],
+  },
+  {
+    type: "function",
+    name: "getLoan",
+    stateMutability: "view",
+    inputs: [{ name: "_loanId", type: "bytes32" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "borrower", type: "address" },
+          { name: "amount", type: "uint256" },
+          { name: "interestRate", type: "uint256" },
+          { name: "duration", type: "uint256" },
+          { name: "startTime", type: "uint256" },
+          { name: "collateralBonds", type: "address[]" },
+          { name: "isActive", type: "bool" },
+          { name: "isRepaid", type: "bool" }
+        ]
+      }
+    ],
+  },
+  {
+    type: "function",
+    name: "getBalance",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "interestRate",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "totalFunds",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "availableFunds",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
 export const bondAbi = (bondOut as any).abi ?? [
   {
     type: "function",
@@ -302,5 +441,14 @@ export function getBondFactoryAddress(): Address {
   }
   return addr;
 }
+
+export function getLenderFactoryAddress(): Address {
+  const addr = process.env.NEXT_PUBLIC_LENDER_FACTORY_ADDRESS as Address | undefined;
+  if (!addr) {
+    throw new Error("Missing NEXT_PUBLIC_LENDER_FACTORY_ADDRESS");
+  }
+  return addr;
+}
+
 
 

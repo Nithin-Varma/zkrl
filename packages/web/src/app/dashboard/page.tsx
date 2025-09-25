@@ -9,11 +9,13 @@ import { useCreateUserBond } from "@/hooks/useUserBond";
 import { useTrustScore } from "@/hooks/useTrustScore";
 import { BondCard } from "@/components/BondCard";
 import { TrustScoreDetails } from "@/components/TrustScoreDetails";
+import { BorrowMoneyTab } from "@/components/BorrowMoneyTab";
+import { LenderMode } from "@/components/LenderMode";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Shield, Users, Plus, ArrowRight, Star, DollarSign, CheckCircle, Loader2 } from "lucide-react";
+import { Shield, Users, Plus, ArrowRight, Star, DollarSign, CheckCircle, Loader2, TrendingUp } from "lucide-react";
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount();
@@ -61,6 +63,9 @@ export default function DashboardPage() {
   // State for creating new bond
   const [showCreateBond, setShowCreateBond] = useState(false);
   const [partnerAddress, setPartnerAddress] = useState("");
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"bonds" | "borrow" | "lender">("bonds");
 
   useEffect(() => {
     if (!isConnected) {
@@ -237,9 +242,38 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Trust Bonds Section */}
-          <div className="space-y-6">
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-6">
+          <Button
+            variant={activeTab === "bonds" ? "default" : "outline"}
+            onClick={() => setActiveTab("bonds")}
+            className="flex-1"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            My Bonds
+          </Button>
+          <Button
+            variant={activeTab === "borrow" ? "default" : "outline"}
+            onClick={() => setActiveTab("borrow")}
+            className="flex-1"
+          >
+            <DollarSign className="w-4 h-4 mr-2" />
+            Borrow Money
+          </Button>
+          <Button
+            variant={activeTab === "lender" ? "default" : "outline"}
+            onClick={() => setActiveTab("lender")}
+            className="flex-1"
+          >
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Join as Lender
+          </Button>
+        </div>
+
+        {activeTab === "bonds" ? (
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Trust Bonds Section */}
+            <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-slate-900">Your Trust Bonds</h2>
               <Button onClick={() => setShowCreateBond(true)}>
@@ -371,55 +405,14 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Quick Actions</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Plus className="w-5 h-5 mr-2 text-blue-600" />
-                  Create Trust Bond
-                </CardTitle>
-                <CardDescription>
-                  Establish a trust relationship with another verified user
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  onClick={() => setShowCreateBond(true)}
-                  className="w-full"
-                >
-                  Start Bonding
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="w-5 h-5 mr-2 text-purple-600" />
-                  View All Bonds
-                </CardTitle>
-                <CardDescription>
-                  See all your active and completed trust bonds
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                  className="w-full"
-                  variant="outline"
-                >
-                  View Bonds
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        ) : activeTab === "borrow" ? (
+          <BorrowMoneyTab 
+            userContractAddress={userContractAddress || undefined}
+            bondsInfo={bondsInfo}
+          />
+        ) : (
+          <LenderMode />
+        )}
       </div>
     </div>
   );

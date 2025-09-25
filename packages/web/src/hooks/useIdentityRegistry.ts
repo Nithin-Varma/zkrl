@@ -7,9 +7,9 @@ export function useIdentityRegistry() {
   return useMemo(() => {
     try {
       const { address, chainId } = getIdentityRegistryConfig();
-      return { address, chainId, abi: identityRegistryAbi as const };
+      return { address, chainId, abi: identityRegistryAbi };
     } catch (e) {
-      return { address: undefined as unknown as Address, chainId: undefined, abi: identityRegistryAbi as const };
+      return { address: undefined as unknown as Address, chainId: undefined, abi: identityRegistryAbi };
     }
   }, []);
 }
