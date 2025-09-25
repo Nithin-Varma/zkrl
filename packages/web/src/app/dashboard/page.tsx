@@ -6,7 +6,9 @@ import { useCheckVerified } from "@/hooks/useCheckVerified";
 import { useUserInitialization } from "@/hooks/useUserInitialization";
 import { useUserBondsInfo } from "@/hooks/useBonds";
 import { useCreateUserBond } from "@/hooks/useUserBond";
+import { useTrustScore } from "@/hooks/useTrustScore";
 import { BondCard } from "@/components/BondCard";
+import { TrustScoreDetails } from "@/components/TrustScoreDetails";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +38,22 @@ export default function DashboardPage() {
   console.log("bonds info....", bondsInfo);
 
   console.log("bonds info", bondsInfo);
+  
+  // Trust score calculation
+  const { 
+    score: calculatedTrustScore, 
+    isLoading: trustScoreLoading,
+    bondScores,
+    penalties
+  } = useTrustScore(
+    userContractAddress || undefined,
+    userDetails as any,
+    {
+      w1: 0.3, // 30% for TVL
+      w2: 0.2, // 20% for time
+      w3: 0.5  // 50% for partner reputation
+    }
+  );
   
   // Bond creation
   const { createBond, isPending: isCreatingBond } = useCreateUserBond(userContractAddress || undefined);
@@ -174,12 +192,12 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {userDetails ? Number((userDetails as any).trustScore) : 0}
+                {trustScoreLoading ? "Calculating..." : calculatedTrustScore.toFixed(2)}
               </div>
               <div className="flex items-center mt-2">
-                <Progress value={userDetails ? Math.min(Number((userDetails as any).trustScore) / 10, 100) : 0} className="flex-1 mr-2" />
+                <Progress value={trustScoreLoading ? 0 : Math.min(calculatedTrustScore * 10, 100)} className="flex-1 mr-2" />
                 <span className="text-sm text-slate-500">
-                  {userDetails ? Math.min(Number((userDetails as any).trustScore) / 10, 100).toFixed(0) : 0}%
+                  {trustScoreLoading ? "0" : Math.min(calculatedTrustScore * 10, 100).toFixed(0)}%
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -308,6 +326,14 @@ export default function DashboardPage() {
           {/* User Info Section */}
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-slate-900">Account Information</h2>
+            
+            {/* Trust Score Details */}
+            <TrustScoreDetails 
+              score={calculatedTrustScore}
+              isLoading={trustScoreLoading}
+              penalties={penalties}
+              bondScores={bondScores}
+            />
             
             <Card>
               <CardHeader>
