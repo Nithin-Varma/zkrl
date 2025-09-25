@@ -87,4 +87,20 @@ contract User is IUser{
         user.totalBonds += 1;
         user.totalActiveBonds += 1;
     }
+
+    function updateBreakDetails(uint256 amount) external {
+        user.totalBrokenBonds += 1;
+        user.totalBrokenAmount += amount;
+        user.totalActiveBonds -=1;
+    }
+
+    function updateWithdrawnDetails(uint256 amount) external {
+        user.totalWithdrawnBonds += 1;
+        user.totalWithdrawnAmount += amount;
+        user.totalActiveBonds -=1;
+    }
+
+    function updateStakeDetails(uint256 amount) external {
+        user.totalAmount += amount;
+    }
 }

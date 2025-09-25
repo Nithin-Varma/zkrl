@@ -52,4 +52,7 @@ interface IUser {
     function getBondCount() external view returns(uint256);
     function updateTrustScore(uint256 newTrustScore) external;
     function addBond(address bondAddress) external;
+    function updateBreakDetails(uint256 amount) external;
+    function updateWithdrawnDetails(uint256 amount) external;
+    function updateStakeDetails(uint256 amount) external;
 }

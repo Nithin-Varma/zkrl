@@ -27,6 +27,8 @@ contract Bond is IBond, ReentrancyGuard {
     mapping(address => bool) public isUser;
     IUserFactory public userFactory;
 
+    error BreakerAmountIsZero();
+
     constructor(address _asset, address _user1, address _user2, address _userFactory) {
         bond = BondDetails({
             asset: _asset,
@@ -50,6 +52,8 @@ contract Bond is IBond, ReentrancyGuard {
 
     function stake(address user, uint256 _amount) public override nonReentrant payable returns (BondDetails memory) {
         _onlyActive();
+        IUser _user = IUser(userFactory.getUserContract(msg.sender));
+        _user.updateStakeDetails(_amount);
         require(_amount > 0, "Amount must be greater than 0");
         individualAmount[user] += _amount;
         bond.totalBondAmount += _amount;
@@ -64,10 +68,13 @@ contract Bond is IBond, ReentrancyGuard {
 
     function withdraw() external nonReentrant returns (BondDetails memory) {
         _onlyActive();
+        IUser user = IUser(userFactory.getUserContract(msg.sender));
         // _onlyUser();
         // Removed _freezed() call as it was causing failures
-        _calculateWithdrawPenalty(msg.sender);
+        // _calculateWithdrawPenalty(msg.sender);
+
         uint256 withdrawable = individualAmount[msg.sender];
+        user.updateWithdrawnDetails(withdrawable);
         individualAmount[msg.sender] = 0;
         bond.isWithdrawn = true;
         
@@ -80,21 +87,30 @@ contract Bond is IBond, ReentrancyGuard {
     }
 
     function breakBond() external nonReentrant returns (BondDetails memory) {
+        IUser user1 = IUser(bond.user1);
+        IUser user2 = IUser(bond.user2);
+        
+       
         _onlyActive();
         // _onlyUser();
         // Removed _freezed() call as it was causing failures
-        _calculateBreakingPenalty(msg.sender);
+        // _calculateBreakingPenalty(msg.sender);
+
         bond.isBroken = true;
         bond.isActive = false;
         
         // Send ETH to msg.sender (the breaker)
-        uint256 breakerAmount = individualAmount[msg.sender];
+        uint256 breakerAmount = bond.totalBondAmount;
+        user1.updateBreakDetails(breakerAmount);
+        user2.updateBreakDetails(breakerAmount);
         individualAmount[bond.user1] = 0;
         individualAmount[bond.user2] = 0;
         
         if (breakerAmount > 0) {
             (bool success, ) = payable(msg.sender).call{value: breakerAmount}("");
             require(success, "ETH transfer failed");
+        } else {
+            revert BreakerAmountIsZero();
         }
         
         emit BondBroken(address(this), bond.user1, bond.user2, msg.sender, bond.totalBondAmount, block.timestamp);
