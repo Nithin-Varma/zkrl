@@ -9,8 +9,9 @@ import { useCreateUserBond } from "@/hooks/useUserBond";
 import { useTrustScore } from "@/hooks/useTrustScore";
 import { BondCard } from "@/components/BondCard";
 import { TrustScoreDetails } from "@/components/TrustScoreDetails";
-import { BorrowMoneyTab } from "@/components/BorrowMoneyTab";
-import { LenderMode } from "@/components/LenderMode";
+import { BorrowMoneyTab } from "@/components/BorrowMoneyTabNew";
+import { UnifiedLenderInterface } from "@/components/UnifiedLenderInterface";
+import { useHasLenderContract } from "@/hooks/useLenderFactory";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +60,9 @@ export default function DashboardPage() {
   
   // Bond creation
   const { createBond, isPending: isCreatingBond } = useCreateUserBond(userContractAddress || undefined);
+  
+  // Check if user has lender contract
+  const { hasContract: hasLenderContract, isLoading: lenderContractLoading } = useHasLenderContract(address);
   
   // State for creating new bond
   const [showCreateBond, setShowCreateBond] = useState(false);
@@ -243,11 +247,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6">
           <Button
             variant={activeTab === "bonds" ? "default" : "outline"}
             onClick={() => setActiveTab("bonds")}
-            className="flex-1"
+            className="flex-1 min-w-[120px]"
           >
             <Shield className="w-4 h-4 mr-2" />
             My Bonds
@@ -255,19 +259,30 @@ export default function DashboardPage() {
           <Button
             variant={activeTab === "borrow" ? "default" : "outline"}
             onClick={() => setActiveTab("borrow")}
-            className="flex-1"
+            className="flex-1 min-w-[120px]"
           >
             <DollarSign className="w-4 h-4 mr-2" />
             Borrow Money
           </Button>
-          <Button
-            variant={activeTab === "lender" ? "default" : "outline"}
-            onClick={() => setActiveTab("lender")}
-            className="flex-1"
-          >
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Join as Lender
-          </Button>
+          {lenderContractLoading ? (
+            <Button
+              variant="outline"
+              disabled
+              className="flex-1 min-w-[120px]"
+            >
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Loading...
+            </Button>
+          ) : (
+            <Button
+              variant={activeTab === "lender" ? "default" : "outline"}
+              onClick={() => setActiveTab("lender")}
+              className="flex-1 min-w-[120px]"
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              {hasLenderContract ? "Lender Dashboard" : "Become a Lender"}
+            </Button>
+          )}
         </div>
 
         {activeTab === "bonds" ? (
@@ -410,9 +425,9 @@ export default function DashboardPage() {
             userContractAddress={userContractAddress || undefined}
             bondsInfo={bondsInfo}
           />
-        ) : (
-          <LenderMode />
-        )}
+        ) : activeTab === "lender" ? (
+          <UnifiedLenderInterface />
+        ) : null}
       </div>
     </div>
   );

@@ -19,44 +19,31 @@ export function useUserBondsInfo(userContractAddress?: string) {
   // Get bonds from user contract (creator's bonds)
   const { data: userBondAddresses, isLoading: loadingUserBonds } = useUserBonds(userContractAddress);
   console.log("bond addresses from user contract", userBondAddresses);
-  
-  // Get all bonds from factory (to find bonds where user is participant)
-  const { data: allBondAddresses, isLoading: loadingAllBonds } = useBondFactoryBonds();
-  console.log("all bond addresses from factory", allBondAddresses);
 
   const bondsInfo = useMemo(() => {
     console.log("🔍 User Bond Addresses:", userBondAddresses);
-    console.log("🔍 All Bond Addresses:", allBondAddresses);
     console.log("🔍 User Contract Address:", userContractAddress);
     
-    if (!userContractAddress) return [];
+    if (!userContractAddress || !userBondAddresses) {
+      console.log("❌ No user contract or bond addresses found");
+      return [];
+    }
 
-    // Combine bonds from user contract and filter all bonds by participant
-    const allBonds = new Set<string>();
-    
-    // Add bonds from user contract (bonds created by this user)
-    if (userBondAddresses && Array.isArray(userBondAddresses)) {
-      userBondAddresses.forEach((bondAddress: string) => allBonds.add(bondAddress));
+    // Only return bonds from user contract (bonds created by this user)
+    if (Array.isArray(userBondAddresses)) {
+      console.log("✅ Found", userBondAddresses.length, "bonds for user");
+      return userBondAddresses.map((bondAddress: string) => ({
+        address: bondAddress,
+      }));
     }
     
-    // Add bonds from factory where user is a participant
-    // Note: This is a workaround - ideally the smart contract should handle this
-    if (allBondAddresses && Array.isArray(allBondAddresses)) {
-      allBondAddresses.forEach((bondAddress: string) => {
-        // We'll let the BondCard component filter by participant
-        // This ensures we get all bonds where the user might be involved
-        allBonds.add(bondAddress);
-      });
-    }
-    
-    return Array.from(allBonds).map((bondAddress: string) => ({
-      address: bondAddress,
-    }));
-  }, [userBondAddresses, allBondAddresses, userContractAddress]);
+    console.log("❌ No valid bonds found");
+    return [];
+  }, [userBondAddresses, userContractAddress]);
 
   return {
     bondsInfo,
-    isLoading: loadingUserBonds || loadingAllBonds,
+    isLoading: loadingUserBonds,
   };
 }
 
