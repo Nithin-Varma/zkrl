@@ -1,11 +1,6 @@
 import { Address } from "viem";
-import identityRegistryOut from "@/contracts/IdentityRegistry.json";
-import userFactoryOut from "@/contracts/UserFactory.json";
-import bondFactoryOut from "@/contracts/BondFactory.json";
-import userOut from "@/contracts/User.json";
-import bondOut from "@/contracts/Bond.json";
 
-export const identityRegistryAbi = (identityRegistryOut as any).abi ?? [
+export const identityRegistryAbi = [
   {
     type: "function",
     name: "checkVerified",
@@ -31,7 +26,7 @@ export const identityRegistryAbi = (identityRegistryOut as any).abi ?? [
   },
 ] as const;
 
-export const userFactoryAbi = (userFactoryOut as any).abi ?? [
+export const userFactoryAbi = [
   {
     type: "function",
     name: "createUser",
@@ -55,7 +50,7 @@ export const userFactoryAbi = (userFactoryOut as any).abi ?? [
   },
 ] as const;
 
-export const bondFactoryAbi = (bondFactoryOut as any).abi ?? [
+export const bondFactoryAbi = [
   {
     type: "function",
     name: "createBond",
@@ -83,7 +78,7 @@ export const bondFactoryAbi = (bondFactoryOut as any).abi ?? [
   },
 ] as const;
 
-export const userAbi = (userOut as any).abi ?? [
+export const userAbi = [
   {
     type: "function",
     name: "getUserDetails",
@@ -283,7 +278,7 @@ export const lenderAbi = [
   },
 ] as const;
 
-export const bondAbi = (bondOut as any).abi ?? [
+export const bondAbi = [
   {
     type: "function",
     name: "bond",
