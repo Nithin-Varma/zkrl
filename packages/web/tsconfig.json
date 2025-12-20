@@ -25,6 +25,7 @@
     "node_modules",
     "**/node_modules",
     "../../node_modules",
-    "**/node_modules/**"
+    "**/node_modules/**",
+    "../../node_modules/.pnpm/@anon-aadhaar+core@*/node_modules/@anon-aadhaar/core/src/**"
   ]
 }
