@@ -4,6 +4,5 @@
   "devCommand": "cd packages/web && pnpm run dev",
   "installCommand": "NODE_ENV=development pnpm install",
   "framework": null,
-  "outputDirectory": "packages/web/.next",
-  "ignoreCommand": "exit 0"
+  "outputDirectory": "packages/web/.next"
 }
