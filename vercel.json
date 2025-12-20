@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd packages/web && bash scripts/copy-contracts.sh && cd ../.. && pnpm -w --filter web build",
+  "buildCommand": "pwd && ls -la && (cd packages/web && bash scripts/copy-contracts.sh) && pnpm -w --filter web build",
   "devCommand": "pnpm -w --filter web dev",
   "installCommand": "NODE_ENV=development pnpm install",
   "framework": null,
