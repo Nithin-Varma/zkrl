@@ -122,7 +122,7 @@ export function UnifiedLenderInterface() {
       await verifyAndLend(
         request.borrower as `0x${string}`,
         request.amount,
-        BigInt(durationInSeconds),
+        durationInSeconds,
         request.selectedBonds as `0x${string}`[],
         proof as `0x${string}`
       );

@@ -50,26 +50,30 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
   const { contractAddress: selectedLenderContract } = useLenderContract(selectedLender);
   
   // Get selected lender info
-  const { 
-    interestRate, 
-    totalFunds, 
-    availableFunds, 
+  const {
+    interestRate,
+    totalFunds,
+    availableFunds,
     balance,
-    isLoading: lenderInfoLoading 
+    isLoading: lenderInfoLoading
   } = useLenderContractInfo(selectedLenderContract);
+
+  // Verify and lend hook
+  const { verifyAndLend, isPending: isLending } = useVerifyAndLend(selectedLenderContract);
 
   // Get user's bonds with detailed info
   const { bondsInfo: userBondsInfo, isLoading: bondsLoading } = useUserBondsInfo(userContractAddress);
 
   // Bond verification hook
-  const { 
-    verifyCollateral, 
-    validateRequest, 
+  const {
+    verifyCollateral,
+    validateRequest,
     getAvailableBonds,
     getMaxLoanAmount,
-    isVerifying, 
+    isVerifying,
     verificationResult,
-    clearResult 
+    setVerificationResult,
+    clearResult
   } = useBondVerification();
 
   // Loan requests hook

@@ -77,6 +77,7 @@ export function useBondVerification() {
     getMaxLoanAmount,
     isVerifying,
     verificationResult,
+    setVerificationResult,
     clearResult: () => setVerificationResult(null)
   };
 }
