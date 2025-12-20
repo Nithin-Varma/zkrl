@@ -4,6 +4,5 @@
   "devCommand": "pnpm run dev",
   "installCommand": "NODE_ENV=development pnpm install",
   "framework": null,
-  "outputDirectory": ".next",
-  "rootDirectory": "packages/web"
+  "outputDirectory": ".next"
 }
