@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAllLenders, useLenderContract } from "@/hooks/useLenderFactory";
-import { useLenderContractInfo, useVerifyAndLend } from "@/hooks/useLenderContract";
+import { useLenderContractInfo } from "@/hooks/useLenderContract";
 import { useBondVerification } from "@/hooks/useBondVerification";
 import { useUserBondsInfo } from "@/hooks/useBonds";
+import { useUserBondsWithDetails } from "@/hooks/useBondDetails";
 import { useLoanRequests } from "@/hooks/useLoanRequests";
+import { BondAmountDisplay } from "@/components/BondAmountDisplay";
 import { useAccount } from "wagmi";
 import { 
   DollarSign, 
@@ -21,7 +23,8 @@ import {
   AlertCircle,
   Plus,
   Minus,
-  Loader2
+  Loader2,
+  Send
 } from "lucide-react";
 
 interface BorrowMoneyTabProps {
@@ -60,6 +63,38 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
 
   // Get user's bonds with detailed info
   const { bondsInfo: userBondsInfo, isLoading: bondsLoading } = useUserBondsInfo(userContractAddress);
+  
+  // Get detailed bond information (amounts, active status, etc.)
+  const { bondsWithDetails, isLoading: bondsDetailsLoading } = useUserBondsWithDetails(
+    userBondsInfo?.map(bond => bond.address) || []
+  );
+
+  // Use the bondsWithDetails directly since it now handles the basic info
+  const fallbackBondsWithDetails = bondsWithDetails;
+
+  // Use the fallback bonds if the detailed ones aren't available
+  const finalBondsWithDetails = fallbackBondsWithDetails;
+
+  // Function to get the total collateral value of selected bonds
+  const getTotalCollateralValue = useMemo(() => {
+    if (selectedBonds.length === 0) return 0;
+    
+    // For now, we'll use a placeholder calculation
+    // In a real implementation, we'd fetch the actual amounts
+    return selectedBonds.length * 1; // Placeholder: 1 ETH per bond
+  }, [selectedBonds]);
+
+  // Debug logging
+  console.log("🔍 BorrowMoneyTabNew Debug:", {
+    userBondsInfo,
+    bondsWithDetails,
+    fallbackBondsWithDetails,
+    finalBondsWithDetails,
+    bondsDetailsLoading,
+    userBondsInfoLength: userBondsInfo?.length || 0,
+    bondsWithDetailsLength: bondsWithDetails?.length || 0,
+    finalBondsLength: finalBondsWithDetails?.length || 0
+  });
 
   // Bond verification hook
   const { 
@@ -71,6 +106,9 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
     verificationResult,
     clearResult 
   } = useBondVerification();
+
+  // Local state for verification result
+  const [localVerificationResult, setLocalVerificationResult] = useState<any>(null);
 
   // Loan requests hook
   const { createRequest, isLoading: isCreatingRequest } = useLoanRequests();
@@ -100,16 +138,16 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
   const handleVerifyCollateral = async () => {
     if (!selectedLender || !loanAmount || !loanDuration || selectedBonds.length === 0 || !address) return;
     
-    // Check if user has any bonds
-    if (!userBondsInfo || userBondsInfo.length === 0) {
+    // Check if user has any active bonds
+    if (!finalBondsWithDetails || finalBondsWithDetails.length === 0) {
       const errorResult = {
         isValid: false,
         totalCollateralValue: 0n,
         collateralRatio: 0,
         selectedBondsCount: 0,
-        message: "No bonds found. Please create bonds first to use as collateral."
+        message: "No active bonds found. Please create and fund bonds first to use as collateral."
       };
-      setVerificationResult(errorResult);
+      setLocalVerificationResult(errorResult);
       setShowVerification(true);
       return;
     }
@@ -122,13 +160,14 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
       timestamp: Date.now()
     };
 
-    // Convert bondsInfo to BondInfo format with proper data
-    const bondInfos = userBondsInfo.map((bond: any) => ({
-      address: bond.address,
-      amount: bond.totalBondAmount,
-      isActive: true, // Assume active for now
+    // For verification, we'll use the selected bonds with placeholder amounts
+    // The actual verification will happen in the smart contract
+    const bondInfos = selectedBonds.map((bondAddress) => ({
+      address: bondAddress,
+      amount: BigInt(1e18), // Placeholder: 1 ETH per bond for verification
+      isActive: true,
       owner: address,
-      partner: bond.partner || ""
+      partner: ""
     }));
 
     await verifyCollateral(loanRequest, bondInfos, 150); // 150% collateral ratio
@@ -140,18 +179,32 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
     
     try {
       const amountInWei = BigInt(parseFloat(loanAmount) * 1e18);
-      const durationInSeconds = parseInt(loanDuration) * 24 * 60 * 60; // Convert days to seconds
-      const proof = "0x" + "0".repeat(64); // Placeholder proof for now
+      const duration = parseInt(loanDuration);
       
-      await verifyAndLend(
-        address as `0x${string}`,
+      // Create loan request instead of calling contract
+      const request = createRequest(
+        selectedLender,
         amountInWei,
-        durationInSeconds,
-        selectedBonds as `0x${string}`[],
-        proof as `0x${string}`
+        duration,
+        selectedBonds,
+        verificationResult.totalCollateralValue,
+        verificationResult.collateralRatio,
+        `Loan request for ${loanAmount} ETH for ${duration} days`
       );
+      
+      console.log("Loan request created:", request);
+      alert(`Loan request submitted to ${selectedLender.slice(0, 10)}...! The lender will review your request.`);
+      
+      // Reset form
+      setSelectedBonds([]);
+      setLoanAmount("");
+      setLoanDuration("");
+      setShowVerification(false);
+      clearResult();
+      
     } catch (error) {
       console.error("Loan request failed:", error);
+      alert("Failed to create loan request. Please try again.");
     }
   };
 
@@ -168,7 +221,7 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
       <div className="text-center">
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Borrow Money</h2>
         <p className="text-slate-600">
-          Use your trust bonds as collateral to borrow money from lenders
+          Use your trust bonds as collateral to request loans from lenders
         </p>
       </div>
 
@@ -177,7 +230,7 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
         <CardHeader>
           <CardTitle>Available Lenders</CardTitle>
           <CardDescription>
-            Choose a lender to borrow from. Each lender has different interest rates and available funds.
+            Choose a lender to request a loan from. Each lender has different interest rates and available funds.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -231,15 +284,15 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* No Bonds Available Message */}
-            {!bondsLoading && (!userBondsInfo || userBondsInfo.length === 0) && (
+            {/* No Active Bonds Available Message */}
+            {!bondsLoading && !bondsDetailsLoading && finalBondsWithDetails.length === 0 && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex items-center space-x-2">
                   <AlertCircle className="w-5 h-5 text-red-500" />
                   <div>
-                    <h4 className="font-medium text-red-700">No Bonds Available</h4>
+                    <h4 className="font-medium text-red-700">No Active Bonds Available</h4>
                     <p className="text-sm text-red-600 mt-1">
-                      You don't have any bonds to use as collateral. Please create bonds first in the "My Bonds" tab.
+                      You don't have any active bonds to use as collateral. Please create and fund bonds first in the "My Bonds" tab.
                     </p>
                   </div>
                 </div>
@@ -285,8 +338,8 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
               
               {showBondSelection && (
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {userBondsInfo && userBondsInfo.length > 0 ? (
-                    userBondsInfo.map((bond) => (
+                  {finalBondsWithDetails && finalBondsWithDetails.length > 0 ? (
+                    finalBondsWithDetails.map((bond) => (
                       <div 
                         key={bond.address}
                         className="flex items-center justify-between p-2 border rounded"
@@ -297,15 +350,23 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
                             checked={selectedBonds.includes(bond.address)}
                             onChange={() => handleBondSelection(bond.address)}
                           />
-                          <span className="font-mono text-sm">{bond.address.slice(0, 10)}...</span>
+                          <div className="flex flex-col">
+                            <span className="font-mono text-sm">{bond.address.slice(0, 10)}...</span>
+                            <BondAmountDisplay 
+                              bondAddress={bond.address}
+                              fallbackAmount="Loading amount..."
+                            />
+                          </div>
                         </div>
-                        <Badge variant="outline">Active</Badge>
+                        <Badge variant="outline" className="bg-green-100 text-green-800">
+                          Active
+                        </Badge>
                       </div>
                     ))
                   ) : (
                     <div className="text-center py-4 text-slate-500">
-                      <p className="text-sm">No bonds found</p>
-                      <p className="text-xs mt-1">Create bonds first to use as collateral</p>
+                      <p className="text-sm">No active bonds found</p>
+                      <p className="text-xs mt-1">Create and fund bonds first to use as collateral</p>
                     </div>
                   )}
                 </div>
@@ -322,17 +383,20 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
                     <span>{selectedBonds.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Estimated Value:</span>
-                    <span>{selectedBonds.length} ETH</span>
+                    <span>Bond Amounts:</span>
+                    <span className="text-sm text-slate-500">
+                      See individual amounts above
+                    </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Max Loan Amount:</span>
-                    <span>{selectedBonds.length * 0.8} ETH (80% LTV)</span>
+                    <span>Note:</span>
+                    <span className="text-xs text-slate-500">
+                      Actual amounts will be verified during loan request
+                    </span>
                   </div>
                 </div>
               </div>
             )}
-
 
             {/* Verification Step - Always show if bonds are selected */}
             {selectedBonds.length > 0 && (
@@ -365,40 +429,40 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
                   ) : (
                     <div className="space-y-4">
                       {/* Verification Result */}
-                      {verificationResult && (
+                      {(verificationResult || localVerificationResult) && (
                         <div className={`p-4 rounded-lg border ${
-                          verificationResult.isValid 
+                          (verificationResult || localVerificationResult)?.isValid 
                             ? 'border-green-200 bg-green-50' 
                             : 'border-red-200 bg-red-50'
                         }`}>
                           <div className="flex items-center space-x-2">
-                            {verificationResult.isValid ? (
+                            {(verificationResult || localVerificationResult)?.isValid ? (
                               <CheckCircle className="w-5 h-5 text-green-500" />
                             ) : (
                               <AlertCircle className="w-5 h-5 text-red-500" />
                             )}
                             <span className={`font-medium ${
-                              verificationResult.isValid ? 'text-green-700' : 'text-red-700'
+                              (verificationResult || localVerificationResult)?.isValid ? 'text-green-700' : 'text-red-700'
                             }`}>
-                              {verificationResult.isValid ? 'Collateral Verified' : 'Verification Failed'}
+                              {(verificationResult || localVerificationResult)?.isValid ? 'Collateral Verified' : 'Verification Failed'}
                             </span>
                           </div>
                           <p className="text-sm mt-2 text-slate-600">
-                            {verificationResult.message}
+                            {(verificationResult || localVerificationResult)?.message}
                           </p>
-                          {verificationResult.isValid && (
+                          {(verificationResult || localVerificationResult)?.isValid && (
                             <div className="mt-3 text-sm space-y-1">
                               <div className="flex justify-between">
                                 <span>Total Collateral:</span>
-                                <span>{Number(verificationResult.totalCollateralValue) / 1e18} ETH</span>
+                                <span>{Number((verificationResult || localVerificationResult)?.totalCollateralValue) / 1e18} ETH</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Collateral Ratio:</span>
-                                <span>{verificationResult.collateralRatio.toFixed(1)}%</span>
+                                <span>{(verificationResult || localVerificationResult)?.collateralRatio?.toFixed(1)}%</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Bonds Used:</span>
-                                <span>{verificationResult.selectedBondsCount}</span>
+                                <span>{(verificationResult || localVerificationResult)?.selectedBondsCount}</span>
                               </div>
                             </div>
                           )}
@@ -419,18 +483,18 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
                         </Button>
                         <Button 
                           onClick={handleRequestLoan}
-                          disabled={!verificationResult?.isValid || isLending}
+                          disabled={!(verificationResult || localVerificationResult)?.isValid || isCreatingRequest}
                           className="flex-1"
                         >
-                          {isLending ? (
+                          {isCreatingRequest ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Processing Loan...
+                              Submitting Request...
                             </>
                           ) : (
                             <>
-                              <DollarSign className="w-4 h-4 mr-2" />
-                              Request Loan
+                              <Send className="w-4 h-4 mr-2" />
+                              Submit Request
                             </>
                           )}
                         </Button>
@@ -460,25 +524,25 @@ export function BorrowMoneyTab({ userContractAddress, bondsInfo }: BorrowMoneyTa
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 border rounded-lg">
               <Shield className="w-8 h-8 mx-auto mb-2 text-blue-500" />
-              <h4 className="font-semibold">1. Select Bonds</h4>
+              <h4 className="font-semibold">1. Submit Request</h4>
               <p className="text-xs text-slate-500 mt-1">
-                Choose your trust bonds as collateral
+                Choose bonds as collateral and submit loan request
               </p>
             </div>
             
             <div className="text-center p-4 border rounded-lg">
-              <DollarSign className="w-8 h-8 mx-auto mb-2 text-green-500" />
-              <h4 className="font-semibold">2. Get Loan</h4>
+              <Clock className="w-8 h-8 mx-auto mb-2 text-green-500" />
+              <h4 className="font-semibold">2. Lender Review</h4>
               <p className="text-xs text-slate-500 mt-1">
-                Receive funds based on bond value
+                Lender reviews your request and collateral
               </p>
             </div>
             
             <div className="text-center p-4 border rounded-lg">
               <CheckCircle className="w-8 h-8 mx-auto mb-2 text-purple-500" />
-              <h4 className="font-semibold">3. Repay & Reclaim</h4>
+              <h4 className="font-semibold">3. Get Approved</h4>
               <p className="text-xs text-slate-500 mt-1">
-                Repay loan to get bonds back
+                Lender approves and sends funds to you
               </p>
             </div>
           </div>

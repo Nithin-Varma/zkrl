@@ -1,9 +1,9 @@
 import { Address } from "viem";
-import identityRegistryOut from "../../../../packages/contracts/out/IdentityRegister.sol/IdentityRegistry.json" assert { type: "json" };
-import userFactoryOut from "../../../../packages/contracts/out/UserFactory.sol/UserFactory.json" assert { type: "json" };
-import bondFactoryOut from "../../../../packages/contracts/out/BondFactory.sol/BondFactory.json" assert { type: "json" };
-import userOut from "../../../../packages/contracts/out/User.sol/User.json" assert { type: "json" };
-import bondOut from "../../../../packages/contracts/out/Bond.sol/Bond.json" assert { type: "json" };
+import identityRegistryOut from "@/contracts/IdentityRegistry.json";
+import userFactoryOut from "@/contracts/UserFactory.json";
+import bondFactoryOut from "@/contracts/BondFactory.json";
+import userOut from "@/contracts/User.json";
+import bondOut from "@/contracts/Bond.json";
 
 export const identityRegistryAbi = (identityRegistryOut as any).abi ?? [
   {
