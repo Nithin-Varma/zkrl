@@ -56,11 +56,11 @@ export function useVerifyAadhaar() {
 				proof.wallet,
 				proof.identityHash,
 				proof.leaf,
-				proof.aggregationId as number,
-				proof.domainId as number,
+				BigInt(proof.aggregationId as number),
+				BigInt(proof.domainId as number),
 				proof.merklePath,
-				proof.leafCount as number,
-				proof.index as number,
+				BigInt(proof.leafCount as number),
+				BigInt(proof.index as number),
 			],
 		});
 	}
