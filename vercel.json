@@ -1,8 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pwd && ls -la && (cd packages/web && bash scripts/copy-contracts.sh) && pnpm -w --filter web build",
-  "devCommand": "pnpm -w --filter web dev",
+  "buildCommand": "bash scripts/copy-contracts.sh && pnpm run build",
+  "devCommand": "pnpm run dev",
   "installCommand": "NODE_ENV=development pnpm install",
   "framework": null,
-  "outputDirectory": "packages/web/.next"
+  "outputDirectory": ".next",
+  "rootDirectory": "packages/web"
 }
